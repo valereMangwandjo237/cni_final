@@ -1,0 +1,5 @@
+easyocr==1.7.2
+Flask==2.3.3
+numpy==1.26.4
+rapidfuzz==3.13.0
+tensorflow==2.18.0
