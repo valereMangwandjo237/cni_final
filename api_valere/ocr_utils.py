@@ -3,7 +3,6 @@ import numpy as np
 from rapidfuzz import fuzz, process
 from PIL import Image
 
-@st.cache_resource
 def load_ocr_model():
     return easyocr.Reader(['fr', 'en'], gpu=False, download_enabled=False)
 
