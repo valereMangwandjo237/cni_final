@@ -4,7 +4,8 @@ import uuid
 import json
 
 from predict import predict_type
-from ocr_utils import extract_ocr_text, verifier_informations, zoom_image
+from ocr_utils import extract_ocr_text, verifier_informations
+from global_score import *
 import warnings
 warnings.filterwarnings("ignore", message=".*pin_memory.*")
 
@@ -61,6 +62,10 @@ def analyser():
         # Étape 3 : Vérification
         verification = verifier_informations(ocr_texts, infos)
 
+        # Étape 3 : calcul score global
+        score_global = calculer_score_global(verification)
+        interpretation = interpret_score(score_global)
+
         # Supprimer les images temporaires
         if os.path.exists(img_recto_path):
             os.remove(img_recto_path)
@@ -70,6 +75,8 @@ def analyser():
         return jsonify({
             "type_document": doc_type,
             "confiance": round(confidence, 3),
+            "score_global": score_global,
+            "interpretation": interpretation,
             "verification_informations": verification
         })
 
