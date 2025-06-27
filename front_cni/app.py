@@ -91,45 +91,51 @@ with col2:
                         # Création de la barre avec texte intégré
                         global_score = result.get("score_global")
 
-                        st.header(f"{global_score}%")
+                        if(global_score != -1 and global_score != -2):
+
+                            st.header(f"{global_score}%")
 
 
-                        bar_color = display_score(global_score)
+                            bar_color = display_score(global_score)
 
-                        # HTML + CSS personnalisé
-                        st.markdown(f"""
-                        <div style="width: 100%; background-color: #ddd; border-radius: 8px;">
-                        <div style="
-                        width: {global_score}%;
-                        background-color: {bar_color};
-                        height: 20px;
-                        border-radius: 8px;">
-                        </div>
-                        </div>
-                        <p style="text-align: center;">Score : {global_score}%</p>
-                        """, unsafe_allow_html=True)
-
-                        for field, details in result.get('verification_informations', {}).items():
-                            # Icône de validation
-                            icon = "✅" if details.get('valide', False) else "❌"
-                            
-                            # Score arrondi
-                            score = round(details.get('score', 0), 1)
-                            
-                            # Valeur OCR trouvée
-                            valeur_ocr = details.get('valeur_ocr', 'Non détecté')
-                            
-                            # Affichage enrichi
+                            # HTML + CSS personnalisé
                             st.markdown(f"""
-                            <div style="margin-bottom: 10px;">
-                                <b>{field.capitalize()}</b> {icon}
-                                <div style="margin-left: 20px; color: #666;">
-                                    Score: {score}%<br>
-                                    Valeur détectée: <span style="color: white;">{valeur_ocr}</span>
-                                </div>
+                            <div style="width: 100%; background-color: #ddd; border-radius: 8px;">
+                            <div style="
+                            width: {global_score}%;
+                            background-color: {bar_color};
+                            height: 20px;
+                            border-radius: 8px;">
                             </div>
+                            </div>
+                            <p style="text-align: center;">Score : {global_score}%</p>
                             """, unsafe_allow_html=True)
-                        st.markdown("</ul></div>", unsafe_allow_html=True)
+
+                            for field, details in result.get('verification_informations', {}).items():
+                                # Icône de validation
+                                icon = "✅" if details.get('valide', False) else "❌"
+                                
+                                # Score arrondi
+                                score = round(details.get('score', 0), 1)
+                                
+                                # Valeur OCR trouvée
+                                valeur_ocr = details.get('valeur_ocr', 'Non détecté')
+                                
+                                # Affichage enrichi
+                                st.markdown(f"""
+                                <div style="margin-bottom: 10px;">
+                                    <b>{field.capitalize()}</b> {icon}
+                                    <div style="margin-left: 20px; color: #666;">
+                                        Score: {score}%<br>
+                                        Valeur détectée: <span style="color: white;">{valeur_ocr}</span>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            st.markdown("</ul></div>", unsafe_allow_html=True)
+                        elif(global_score == -1):
+                            st.error("Votre image semble ne pas respecter le bon type. Veillez inserer la bonne image et plus claire")
+                        else:
+                            st.warning("Profil à vérifier au POOL..........!")
                     else:
                         st.error(f"Erreur lors de l'analyse (code {response.status_code})")
                     

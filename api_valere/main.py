@@ -44,44 +44,66 @@ def analyser():
         # Étape 1 : prédire le type
         doc_type, confidence = predict_type(img_recto_path)
 
-        # Étape 2 : OCR
-        ocr_recto = extract_ocr_text(img_recto_path)
-        ocr_verso = extract_ocr_text(img_verso_path)
+        #si la confiance est inferieure à 60% ou si le type nest pas bon, on ne fait pas l'extraction
+        if(doc_type!="others" and confidence > 60):
 
-        ocr_texts = ocr_recto + ocr_verso
+            # Étape 2 : OCR
+            ocr_recto = extract_ocr_text(img_recto_path)
+            ocr_verso = extract_ocr_text(img_verso_path)
 
-        # Infos utilisateur
-        infos = {
-            "nom": json_data.get("nom", ""),
-            "prenom": json_data.get("prenom", ""),
-            "numero": json_data.get("numero", ""),
-            "lieu de naissance": json_data.get("lieu_de_naisance", ""),
-            "date de naissance": json_data.get("date_de_naissance", "")
-        }
+            ocr_texts = ocr_recto + ocr_verso
 
-        # Étape 3 : Vérification
-        verification = verifier_informations(ocr_texts, infos)
+            # Infos utilisateur
+            infos = {
+                "nom": json_data.get("nom", ""),
+                "prenom": json_data.get("prenom", ""),
+                "numero": json_data.get("numero", ""),
+                "lieu de naissance": json_data.get("lieu_de_naisance", ""),
+                "date de naissance": json_data.get("date_de_naissance", "")
+            }
 
-        # Étape 3 : calcul score global
-        score_global = calculer_score_global(verification)
-        interpretation = interpret_score(score_global)
+            # Étape 3 : Vérification
+            verification = verifier_informations(ocr_texts, infos)
 
+            # Étape 3 : calcul score global
+            score_global = calculer_score_global(verification)
+            interpretation = interpret_score(score_global)
+
+            # Supprimer les images temporaires
+            if os.path.exists(img_recto_path):
+                os.remove(img_recto_path)
+            if os.path.exists(img_verso_path):
+                os.remove(img_verso_path)
+
+            return jsonify({
+                "type_document": doc_type,
+                "confiance": round(confidence, 3),
+                "score_global": score_global,
+                "interpretation": interpretation,
+                "verification_informations": verification
+            })
+        elif(doc_type=="others"):
+            return jsonify({
+                "type_document": doc_type,
+                "confiance": round(confidence, 3),
+                "score_global": -1
+            })
+        else:
+            return jsonify({
+                "type_document": doc_type,
+                "confiance": round(confidence, 3),
+                "score_global": -2
+            })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
         # Supprimer les images temporaires
         if os.path.exists(img_recto_path):
             os.remove(img_recto_path)
         if os.path.exists(img_verso_path):
             os.remove(img_verso_path)
 
-        return jsonify({
-            "type_document": doc_type,
-            "confiance": round(confidence, 3),
-            "score_global": score_global,
-            "interpretation": interpretation,
-            "verification_informations": verification
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
