@@ -25,7 +25,7 @@ def calculer_score_global(verification_infos):
     
     # Ajustement non-linéaire (pénalise les faibles scores)
     if any(infos["score"] < 50 for infos in verification_infos.values()):
-        score_final *= 0.7  # Pénalité de 30%
+        score_final *= 0.8  # Pénalité de 20%
     
     return min(100, max(0, round(score_final, 2)))  # Borné à 0-100
 

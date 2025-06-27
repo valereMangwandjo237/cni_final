@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime
+from display_global_score import *
 
 # Configuration de la page
 st.set_page_config(layout="wide")
@@ -76,42 +77,59 @@ with col2:
                         # Affichage des résultats
                         st.success("Analyse terminée avec succès!")
 
-                        col_res1, col_res2 = st.columns(2)
+                        st.image(recto, caption="Recto CNI", width=300)
+                        
+                        st.markdown(f"""
+                        <div class="result-box">
+                            <h3>Type de document</h3>
+                            <p><strong style="color: #ff4d4d; font-size: 1.4em;">{result.get('type_document', 'Inconnu')}</strong> (confiance: {result.get('confiance', 0)*100:.1f}%)</p>
+                            
+                            --------Vérification--------
+                            <ul>
+                        """, unsafe_allow_html=True)
 
-                        with col_res1:
-                            st.image(recto, caption="Recto CNI", width=300)
-                            st.image(verso, caption="Verso CNI", width=300)
-                        with col_res2:
+                        # Création de la barre avec texte intégré
+                        global_score = result.get("score_global")
+
+                        st.header(f"{global_score}%")
+
+
+                        bar_color = display_score(global_score)
+
+                        # HTML + CSS personnalisé
+                        st.markdown(f"""
+                        <div style="width: 100%; background-color: #ddd; border-radius: 8px;">
+                        <div style="
+                        width: {global_score}%;
+                        background-color: {bar_color};
+                        height: 20px;
+                        border-radius: 8px;">
+                        </div>
+                        </div>
+                        <p style="text-align: center;">Score : {global_score}%</p>
+                        """, unsafe_allow_html=True)
+
+                        for field, details in result.get('verification_informations', {}).items():
+                            # Icône de validation
+                            icon = "✅" if details.get('valide', False) else "❌"
+                            
+                            # Score arrondi
+                            score = round(details.get('score', 0), 1)
+                            
+                            # Valeur OCR trouvée
+                            valeur_ocr = details.get('valeur_ocr', 'Non détecté')
+                            
+                            # Affichage enrichi
                             st.markdown(f"""
-                            <div class="result-box">
-                                <h3>Type de document</h3>
-                                <p><strong style="color: #ff4d4d; font-size: 1.4em;">{result.get('type_document', 'Inconnu')}</strong> (confiance: {result.get('confiance', 0)*100:.1f}%)</p>
-                                
-                                --------Vérification--------
-                                <ul>
-                            """, unsafe_allow_html=True)
-
-                            for field, details in result.get('verification_informations', {}).items():
-                                # Icône de validation
-                                icon = "✅" if details.get('valide', False) else "❌"
-                                
-                                # Score arrondi
-                                score = round(details.get('score', 0), 1)
-                                
-                                # Valeur OCR trouvée
-                                valeur_ocr = details.get('valeur_ocr', 'Non détecté')
-                                
-                                # Affichage enrichi
-                                st.markdown(f"""
-                                <div style="margin-bottom: 10px;">
-                                    <b>{field.capitalize()}</b> {icon}
-                                    <div style="margin-left: 20px; color: #666;">
-                                        Score: {score}%<br>
-                                        Valeur détectée: <span style="color: white;">{valeur_ocr}</span>
-                                    </div>
+                            <div style="margin-bottom: 10px;">
+                                <b>{field.capitalize()}</b> {icon}
+                                <div style="margin-left: 20px; color: #666;">
+                                    Score: {score}%<br>
+                                    Valeur détectée: <span style="color: white;">{valeur_ocr}</span>
                                 </div>
-                                """, unsafe_allow_html=True)
-                            st.markdown("</ul></div>", unsafe_allow_html=True)
+                            </div>
+                            """, unsafe_allow_html=True)
+                        st.markdown("</ul></div>", unsafe_allow_html=True)
                     else:
                         st.error(f"Erreur lors de l'analyse (code {response.status_code})")
                     
