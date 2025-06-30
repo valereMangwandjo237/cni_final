@@ -2,15 +2,13 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime
-from display_global_score import *
+from function_stream import *
 
 # Configuration de la page
 st.set_page_config(layout="wide")
 st.title("Vérification d'identité par CNI")
 # URL de votre API Flask (à adapter)
 API_URL = "http://127.0.0.1:5000/analyser"
-
-
 
 # Layout en 2 colonnes
 col1, col2 = st.columns([1, 1])
@@ -59,9 +57,11 @@ with col2:
                     }
                     
                     # Envoi à l'API Flask
+                    recto_compressed = compress_image(recto)
+                    verso_compressed = compress_image(verso)
                     files = {
-                        'recto': (recto.name, recto.getvalue(), recto.type),
-                        'verso': (verso.name, verso.getvalue(), verso.type)
+                        'recto': (recto.name, recto_compressed, 'image/jpeg'),
+                        'verso': (verso.name, verso_compressed, 'image/jpeg'),
                     }
 
                     response = requests.post(
@@ -93,7 +93,7 @@ with col2:
 
                         if(global_score != -1 and global_score != -2):
 
-                            st.header(f"{global_score}%")
+                            st.header(f"Identité similaire à {global_score}%")
 
 
                             bar_color = display_score(global_score)

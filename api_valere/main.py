@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 import os
-import uuid
 import json
+import easyocr
+from PIL import Image
+import traceback
 
 from predict import predict_type
 from ocr_utils import extract_ocr_text, verifier_informations
@@ -10,6 +12,8 @@ import warnings
 warnings.filterwarnings("ignore", message=".*pin_memory.*")
 
 app = Flask(__name__)
+
+reader = easyocr.Reader(['fr', 'en'], gpu=False, download_enabled=False)
 
 @app.route('/')
 def home():
@@ -34,24 +38,19 @@ def analyser():
             if key not in json_data:
                 return jsonify({"error": f"Champ manquant : {key}"}), 400
 
-        # Sauvegarder les images temporairement
-        img_recto_path = f"temp_{uuid.uuid4()}.jpg"
-        img_verso_path = f"temp_{uuid.uuid4()}.jpg"
-
-        file_recto.save(img_recto_path)
-        file_verso.save(img_verso_path)
+        img_pil = Image.open(file_recto.stream).convert("RGB")
+        img_np = np.array(img_pil)
 
         # Étape 1 : prédire le type
-        doc_type, confidence = predict_type(img_recto_path)
+        doc_type, confidence = predict_type(img_np)
 
         #si la confiance est inferieure à 60% ou si le type nest pas bon, on ne fait pas l'extraction
-        if(doc_type!="others" and confidence > 60):
+        if(doc_type!="others" and confidence > 0.6):
+
+            print("bonne qualité")
 
             # Étape 2 : OCR
-            ocr_recto = extract_ocr_text(img_recto_path)
-            ocr_verso = extract_ocr_text(img_verso_path)
-
-            ocr_texts = ocr_recto + ocr_verso
+            ocr_texts = extract_ocr_text(file_recto, file_verso, reader=reader)
 
             # Infos utilisateur
             infos = {
@@ -69,12 +68,6 @@ def analyser():
             score_global = calculer_score_global(verification)
             interpretation = interpret_score(score_global)
 
-            # Supprimer les images temporaires
-            if os.path.exists(img_recto_path):
-                os.remove(img_recto_path)
-            if os.path.exists(img_verso_path):
-                os.remove(img_verso_path)
-
             return jsonify({
                 "type_document": doc_type,
                 "confiance": round(confidence, 3),
@@ -83,12 +76,14 @@ def analyser():
                 "verification_informations": verification
             })
         elif(doc_type=="others"):
+            print("cest un others")
             return jsonify({
                 "type_document": doc_type,
                 "confiance": round(confidence, 3),
                 "score_global": -1
             })
         else:
+            print("mauvais")
             return jsonify({
                 "type_document": doc_type,
                 "confiance": round(confidence, 3),
@@ -96,13 +91,8 @@ def analyser():
             })
         
     except Exception as e:
+        print("Erreur interne :", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
-    finally:
-        # Supprimer les images temporaires
-        if os.path.exists(img_recto_path):
-            os.remove(img_recto_path)
-        if os.path.exists(img_verso_path):
-            os.remove(img_verso_path)
 
 
 
