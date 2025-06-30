@@ -6,7 +6,16 @@ from function_stream import *
 
 # Configuration de la page
 st.set_page_config(layout="wide")
-st.title("Vérification d'identité par CNI")
+st.markdown("""
+    <div style="text-align: center;">
+        <h1 style="color: #00FFFF ; font-size: 48px; margin: 0;">
+            Vérification d'identité par CNI
+        </h1>
+    </div>
+
+
+""", unsafe_allow_html=True)
+
 # URL de votre API Flask (à adapter)
 API_URL = "http://127.0.0.1:5000/analyser"
 
@@ -32,6 +41,7 @@ with col1:
 
 with col2:
     st.header("Vérification des documents")
+    
     
     if submitted:
         # Validation des champs obligatoires
