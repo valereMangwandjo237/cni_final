@@ -62,7 +62,7 @@ def analyser():
             }
 
             # Étape 3 : Vérification
-            verification = verifier_informations(ocr_texts, infos)
+            verification, date_expiration = verifier_informations(ocr_texts, infos)
 
             # Étape 3 : calcul score global
             score_global = calculer_score_global(verification)
@@ -73,6 +73,7 @@ def analyser():
                 "confiance": round(confidence, 3),
                 "score_global": score_global,
                 "interpretation": interpretation,
+                "date_expiration": date_expiration,
                 "verification_informations": verification
             })
         elif(doc_type=="others"):

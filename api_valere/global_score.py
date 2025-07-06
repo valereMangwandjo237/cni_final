@@ -35,7 +35,7 @@ def interpret_score(score):
         return "Correspondance très forte"
     elif score >= 75:
         return "Correspondance probable"
-    elif score >= 60:
+    elif score >= 50:
         return "Correspondance possible (vérification recommandée)"
     else:
-        return "Risque d'erreur élevé"
+        return "Risque d'erreur élevé. Bloqué!!!"

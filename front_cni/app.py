@@ -102,8 +102,15 @@ with col2:
                         global_score = result.get("score_global")
 
                         if(global_score != -1 and global_score != -2):
+                            date_expiration = result.get("date_expiration", "Non disponible") if result else "Non disponible"
 
-                            st.header(f"Identité similaire à {global_score}%")
+                            st.markdown(f"""
+                                    <p>
+                                        <strong style="color: #ff4d4d; font-size: 1.4em;">
+                                            Date d'expiration: {date_expiration}
+                                        </strong>
+                                    </p> 
+                                """, unsafe_allow_html=True)
 
 
                             bar_color = display_score(global_score)
@@ -118,7 +125,11 @@ with col2:
                             border-radius: 8px;">
                             </div>
                             </div>
-                            <p style="text-align: center;">Score : {global_score}%</p>
+                            <p style="text-align: center;">Probabilité globale de correspondance : {global_score}%</p>
+                            """, unsafe_allow_html=True)
+
+                            st.markdown(f"""
+                                <p style="color: #00FFFF ; font-size: 25px;">Interpretation : {result.get("interpretation")}</p>
                             """, unsafe_allow_html=True)
 
                             for field, details in result.get('verification_informations', {}).items():

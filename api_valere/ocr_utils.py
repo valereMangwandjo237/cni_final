@@ -2,6 +2,7 @@ import numpy as np
 from rapidfuzz import fuzz, process
 from PIL import Image
 import re
+from datetime import datetime
 
 def extract_ocr_text(recto_file, verso_file=None, reader=None):
 
@@ -82,6 +83,10 @@ def verifier_informations(extracted_texts, infos_utilisateur):
     # Extraire uniquement les chaînes de caractères des OCR
     only_texts = [item[1] for item in extracted_texts]
 
+    #trouver la date d'expiration de la carte
+    dates_trouvees = filtrer_dates(only_texts)
+    date_max = trouver_date_max(dates_trouvees)
+
     verification = {}
     for key, value in infos_utilisateur.items():
         if key == "date de naissance":
@@ -94,4 +99,34 @@ def verifier_informations(extracted_texts, infos_utilisateur):
             "valeur_ocr": normalize_date(matched) if key == "date de naissance" and matched else matched,
             "score": score
         }
-    return verification
+    return verification, date_max
+
+
+def filtrer_dates(extracted_texts):
+    pattern = r"\b\d{2}[\/\-,. ]+\d{2}[\/\-,. ]+\d{4}\b"
+    dates = []
+
+    for mot in extracted_texts:
+        if isinstance(mot, str):
+            texte = mot.strip()
+            if re.fullmatch(pattern, texte):
+                dates.append(normalize_date(texte))
+    
+    print(dates)
+    return dates
+
+
+def trouver_date_max(liste_dates, formats=["%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y"]):
+    dates_valides = []
+    for d in liste_dates:
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(d, fmt)
+                dates_valides.append((dt, d))
+                break  # une fois un format validé, on ne teste pas les autres
+            except ValueError:
+                continue
+    if not dates_valides:
+        return None
+    date_max = max(dates_valides, key=lambda x: x[0])
+    return date_max[1]
