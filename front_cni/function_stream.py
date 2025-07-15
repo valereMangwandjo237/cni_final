@@ -26,3 +26,11 @@ def compress_image(uploaded_file, max_size=(1000, 1000), quality=85):
     img.save(buffer, format="JPEG", quality=quality)
     buffer.seek(0)
     return buffer
+
+def getType(name, confiance):
+    if confiance >= 0.75:
+        if name == "others":
+            return "BLOQUE!!"
+        if name != "others": return "VALIDE!!"
+    else:
+        return "A VERIFIER AU POOL"

@@ -30,7 +30,7 @@ with col1:
         nom = st.text_input("Nom *", help="Votre nom de famille", key="nom").strip()
         prenom = st.text_input("Prénom (optionnel)", help="Votre prénom", key="prenom").strip()
         lieu_naissance = st.text_input("Lieu de naissance *", help="Ville de naissance", key="lieu_naissance").strip()
-        numero_cni = st.text_input("Numéro de CNI *", help="Numéro figurant sur la CNI", key="numero_cni").strip()
+        numero_cni = st.text_input("Numéro de la piece *", help="Numéro figurant sur la CNI", key="numero_cni").strip()
         date_naissance = st.date_input("Date de naissance *", min_value=datetime(1900,1,1), key="date_naissance")
         
         st.markdown("**Photos de la CNI (recto et verso)**")
@@ -88,14 +88,14 @@ with col2:
                         st.success("Analyse terminée avec succès!")
 
                         st.image(recto, caption="Recto CNI", width=300)
+
+                        #TROUVER LE TYPE
+                        type = getType(result.get('type_document'), result.get('confiance', 0))
                         
                         st.markdown(f"""
                         <div class="result-box">
                             <h3>Type de document</h3>
-                            <p><strong style="color: #ff4d4d; font-size: 1.4em;">{result.get('type_document', 'Inconnu')}</strong> (confiance: {result.get('confiance', 0)*100:.1f}%)</p>
-                            
-                            --------Vérification--------
-                            <ul>
+                            <p><strong style="color: #ff4d4d; font-size: 1.4em;">{type}</strong></p>
                         """, unsafe_allow_html=True)
 
                         # Création de la barre avec texte intégré
@@ -106,7 +106,7 @@ with col2:
 
                             st.markdown(f"""
                                     <p>
-                                        <strong style="color: #ff4d4d; font-size: 1.4em;">
+                                        <strong style="color: white; font-size: 1.4em;">
                                             Date d'expiration: {date_expiration}
                                         </strong>
                                     </p> 
@@ -115,44 +115,8 @@ with col2:
 
                             bar_color = display_score(global_score)
 
-                            # HTML + CSS personnalisé
-                            st.markdown(f"""
-                            <div style="width: 100%; background-color: #ddd; border-radius: 8px;">
-                            <div style="
-                            width: {global_score}%;
-                            background-color: {bar_color};
-                            height: 20px;
-                            border-radius: 8px;">
-                            </div>
-                            </div>
-                            <p style="text-align: center;">Probabilité globale de correspondance : {global_score}%</p>
-                            """, unsafe_allow_html=True)
-
-                            st.markdown(f"""
-                                <p style="color: #00FFFF ; font-size: 25px;">Interpretation : {result.get("interpretation")}</p>
-                            """, unsafe_allow_html=True)
-
-                            for field, details in result.get('verification_informations', {}).items():
-                                # Icône de validation
-                                icon = "✅" if details.get('valide', False) else "❌"
+                           
                                 
-                                # Score arrondi
-                                score = round(details.get('score', 0), 1)
-                                
-                                # Valeur OCR trouvée
-                                valeur_ocr = details.get('valeur_ocr', 'Non détecté')
-                                
-                                # Affichage enrichi
-                                st.markdown(f"""
-                                <div style="margin-bottom: 10px;">
-                                    <b>{field.capitalize()}</b> {icon}
-                                    <div style="margin-left: 20px; color: #666;">
-                                        Score: {score}%<br>
-                                        Valeur détectée: <span style="color: white;">{valeur_ocr}</span>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            st.markdown("</ul></div>", unsafe_allow_html=True)
                         elif(global_score == -1):
                             st.error("Votre image semble ne pas respecter le bon type. Veillez inserer la bonne image et plus claire")
                         else:
@@ -164,3 +128,52 @@ with col2:
                     st.error(f"Erreur de connexion à l'API : {str(e)}")
                 except Exception as e:
                     st.error(f"Erreur inattendue : {str(e)}")
+        
+
+        # Affichage centralisé en dehors des colonnes
+if submitted and 'result' in locals() and result.get("score_global") not in [-1, -2]:
+    global_score = result.get("score_global")
+    bar_color = display_score(global_score)
+    interpretation = result.get("interpretation", "")
+
+    # Bloc principal centré
+    st.markdown(f"""
+    <div style="text-align: center; padding-top: 30px;">
+        <div style="width: 80%; margin: auto; background-color: #ddd; border-radius: 8px;">
+            <div style="
+                width: {global_score}%;
+                background-color: {bar_color};
+                height: 20px;
+                border-radius: 8px;">
+            </div>
+        </div>
+        <p style="font-size: 18px; margin-top: 10px;">
+            Probabilité globale de correspondance : <b>{global_score}%</b>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div style="text-align: center; padding-top: 30px;">
+            <p style="color: #00FFFF ; font-size: 25px;">
+                <spam style="color: white; font-size: 22px;">Décision : <spam>
+                {result.get("interpretation")}
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Résultats de vérification
+    for field, details in result.get('verification_informations', {}).items():
+        icon = "✅" if details.get('valide', False) else "❌"
+        score = round(details.get('score', 0), 1)
+        valeur_ocr = details.get('valeur_ocr', 'Non détecté')
+
+        st.markdown(f"""
+        <div style="width: 70%; margin: 10px auto; padding: 10px; background-color: #1e1e1e; border-radius: 8px;">
+            <b>{field.capitalize()}</b> {icon}
+            <div style="margin-left: 20px; color: #ccc;">
+                Score : {score}%<br>
+                Valeur détectée : <span style="color: white;">{valeur_ocr}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)

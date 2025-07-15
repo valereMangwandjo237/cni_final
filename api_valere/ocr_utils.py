@@ -4,24 +4,123 @@ from PIL import Image
 import re
 from datetime import datetime
 
-def extract_ocr_text(recto_file, verso_file=None, reader=None):
+def est_mot_valide(mot):
+    # Supprime les ponctuations et vérifie si le mot est alphabétique et a au moins 3 lettres
+    return mot.isalpha() and len(mot) >= 5
 
+
+def zoom_image_for_extract(img, scale):
+    width, height = img.size
+    resized_img = img.resize((int(width * scale), int(height * scale)), Image.LANCZOS)
+    return resized_img
+
+
+def rotate_image_if_needed(image_np, reader, seuil_mots=6):
+    angles = [0, 180, 90, 270]
+    zoom_levels = [1.0, 1.5, 2.0, 2.5]
+
+    best_results = []
+    max_word_count = 0
+    best_angle = 0
+    best_zoom = 1.0
+
+    # Étape 1 : test de chaque rotation sans zoom
+    for angle in angles:
+        img = Image.fromarray(image_np).rotate(angle, expand=True)
+        img_np_rotated = np.array(img)
+        results = reader.readtext(img_np_rotated)
+
+        mots_valides = []
+        for item in results:
+            if len(item) > 1:
+                mot = item[1].strip()
+                if est_mot_valide(mot):
+                    mots_valides.append(mot)
+
+        word_count = len(mots_valides)
+        print(f"[DEBUG] Rotation {angle}°, Zoom ×1.0 → {word_count} mots valides")
+
+        if word_count > max_word_count:
+            best_results = results
+            max_word_count = word_count
+            best_angle = angle
+            best_zoom = 1.0
+
+        if word_count >= seuil_mots:
+            print(f"[DEBUG] ✅ OCR suffisant à {angle}° sans zoom ({word_count} mots valides)")
+            return results
+
+    # Étape 2 : test de chaque zoom pour chaque angle
+    for zoom_factor in zoom_levels[1:]:  # Ignore 1.0 (déjà fait)
+        for angle in angles:
+            img = Image.fromarray(image_np).rotate(angle, expand=True)
+            img = zoom_image_for_extract(img, scale=zoom_factor)
+            img_np_zoomed = np.array(img)
+            results = reader.readtext(img_np_zoomed)
+
+            mots_valides = []
+            for item in results:
+                if len(item) > 1:
+                    mot = item[1].strip()
+                    if est_mot_valide(mot):
+                        mots_valides.append(mot)
+
+            word_count = len(mots_valides)
+            print(f"[DEBUG] Rotation {angle}°, Zoom ×{zoom_factor} → {word_count} mots valides")
+
+            if word_count > max_word_count:
+                best_results = results
+                max_word_count = word_count
+                best_angle = angle
+                best_zoom = zoom_factor
+
+            if word_count >= seuil_mots:
+                print(f"[DEBUG] ✅ OCR suffisant à {angle}° avec zoom ×{zoom_factor} ({word_count} mots valides)")
+                return results
+
+    print(f"[DEBUG] ❌ Aucun angle/zoom n’a atteint {seuil_mots} mots valides")
+    print(f"[DEBUG] Meilleur résultat : {max_word_count} mots à {best_angle}° zoom {best_zoom}")
+    return best_results
+
+
+
+
+
+def file_storage_to_ndarray(file_storage):
+    try:
+        image = Image.open(file_storage.stream).convert('RGB')
+        image = zoom_image_pil(image)
+        return np.array(image)
+    except Exception as e:
+        print(f"[Erreur de lecture d’image] {file_storage.filename} ➜ {e}")
+        return None
+    
+
+def extract_ocr_text(recto_file, verso_file=None, reader=None):
     images_np = []
 
-    img_recto = Image.open(recto_file.stream).convert("RGB")
-    img_recto = zoom_image_pil(img_recto)
-    images_np.append(np.array(img_recto))
+    img_recto = file_storage_to_ndarray(recto_file)
+    if img_recto is not None:
+        images_np.append(img_recto)
 
     if verso_file:
-        img_verso = Image.open(verso_file.stream).convert("RGB")
-        img_verso = zoom_image_pil(img_verso)
-        images_np.append(np.array(img_verso))
+        img_verso = file_storage_to_ndarray(verso_file)
+        if img_verso is not None:
+            images_np.append(img_verso)
 
-    results = reader.readtext_batched(images_np)
+    if not images_np:
+        raise ValueError("Aucune image valide fournie pour l'OCR.")
+    
+    # Debug : vérifier types et formes
+    print(f"[DEBUG] Nombre d'images OCR : {len(images_np)}")
+    for idx, img in enumerate(images_np):
+        print(f"[DEBUG] Image {idx} - type: {type(img)}, shape: {getattr(img, 'shape', 'N/A')}")
+    
 
     all_texts = []
-    for res in results:
-        all_texts.extend(res)
+    for img in images_np:
+        results = rotate_image_if_needed(img, reader)
+        all_texts.extend(results)
 
     return all_texts
 
@@ -112,7 +211,7 @@ def filtrer_dates(extracted_texts):
             if re.fullmatch(pattern, texte):
                 dates.append(normalize_date(texte))
     
-    print(dates)
+    print("Date: ", dates)
     return dates
 
 

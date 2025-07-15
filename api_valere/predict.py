@@ -27,3 +27,27 @@ def predict_type(image_np):
         return "inconnu", 0.0
    
 
+def predict_type_by_keyword(extracted_texts):
+    if not extracted_texts:
+        return "others", 1.0
+    
+    # Extraire uniquement les chaînes de caractères des OCR
+    word_list = [item[1] for item in extracted_texts]
+    print("Texte extrait: ", word_list)
+
+    for word in word_list:
+        word_lower = word.lower()
+        
+        # Recherche de mots-clés pour "recepissé"
+        if any(keyword in word_lower for keyword in ["kit", "tempory", "request", "presidence", "presidency", "provisoire"]):
+            return "recepisse", 1.0
+        
+        # Recherche de préfixes pour "passeport"
+        if word_lower.startswith("pocmr") or word_lower.startswith("aa") or word_lower.startswith("passeport"):
+            return "passport", 1.0
+        
+        #full_text = " ".join(word.lower() for word in word_list)
+        #if not any(keyword in full_text for keyword in ["republique", "cameroun", "republic", "cameroon"]):
+        #    return "others", 1.0  # Confiance maximale car on est sûr que ce n’est pas un document officiel
+    
+    return "inconnu", 0.0

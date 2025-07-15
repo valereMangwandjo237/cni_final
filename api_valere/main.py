@@ -5,7 +5,7 @@ import easyocr
 from PIL import Image
 import traceback
 
-from predict import predict_type
+from predict import *
 from ocr_utils import extract_ocr_text, verifier_informations
 from global_score import *
 import warnings
@@ -40,17 +40,19 @@ def analyser():
 
         img_pil = Image.open(file_recto.stream).convert("RGB")
         img_np = np.array(img_pil)
+        print(f"Type recto: {type(file_recto)}, verso: {type(file_verso)}")
 
-        # Étape 1 : prédire le type
-        doc_type, confidence = predict_type(img_np)
+        # Étape 1 : OCR
+        ocr_texts = extract_ocr_text(file_recto, file_verso, reader=reader)
+        doc_type, confidence = predict_type_by_keyword(ocr_texts)
+
+        if(doc_type == "inconnu"):
+            doc_type, confidence = predict_type(img_np)
 
         #si la confiance est inferieure à 60% ou si le type nest pas bon, on ne fait pas l'extraction
         if(doc_type!="others" and confidence > 0.6):
 
             print("bonne qualité")
-
-            # Étape 2 : OCR
-            ocr_texts = extract_ocr_text(file_recto, file_verso, reader=reader)
 
             # Infos utilisateur
             infos = {
@@ -90,7 +92,7 @@ def analyser():
                 "confiance": round(confidence, 3),
                 "score_global": -2
             })
-        
+
     except Exception as e:
         print("Erreur interne :", traceback.format_exc())
         return jsonify({"error": str(e)}), 500

@@ -32,10 +32,10 @@ def calculer_score_global(verification_infos):
 
 def interpret_score(score):
     if score >= 90:
-        return "Correspondance très forte"
+        return "PROFIL VALIDE !!"
     elif score >= 75:
         return "Correspondance probable"
-    elif score >= 50:
-        return "Correspondance possible (vérification recommandée)"
+    elif score >= 40 :
+        return "vérification recommandée au POOL"
     else:
-        return "Risque d'erreur élevé. Bloqué!!!"
+        return "PROFIL BLOQUE!!!"
