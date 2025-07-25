@@ -15,7 +15,8 @@ def zoom_image_for_extract(img, scale):
     return resized_img
 
 
-def rotate_image_if_needed(image_np, reader, seuil_mots=6):
+def rotate_image_if_needed(image_np, reader, seuil_mots=3
+                           ):
     angles = [0, 180, 90, 270]
     zoom_levels = [1.0, 1.5, 2.0, 2.5]
 
