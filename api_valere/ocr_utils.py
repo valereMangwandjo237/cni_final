@@ -3,6 +3,47 @@ from rapidfuzz import fuzz, process
 from PIL import Image
 import re
 from datetime import datetime
+import cv2
+import tensorflow as tf
+from tensorflow.keras.applications.efficientnet import preprocess_input
+from predict import predict_type
+
+# === Chargement du modèle de rotation ===
+rotation_model = tf.keras.models.load_model("model\ROTATION_efficient_GOAT.h5")
+rotation_map = {0: 0, 1: 180, 2: 270, 3: 90}
+
+def corriger_rotation_par_modele(image_pil):
+    """
+    Utilise un modèle pour détecter et corriger l'orientation de l'image.
+    """
+    if isinstance(image_pil, np.ndarray):
+        image_pil = Image.fromarray(image_pil)
+        
+    img = image_pil.resize((224, 224))
+    img_array = np.array(img)
+    img_array = preprocess_input(img_array)
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    predictions = rotation_model.predict(img_array)
+    predicted_class = np.argmax(predictions)
+    angle = rotation_map[predicted_class]
+
+    print(f"[ROTATION] Angle détecté : {angle}°")
+    image_np = np.array(image_pil)
+
+    if angle == 0:
+        return image_np
+
+    # Rotation inverse pour redresser
+    (h, w) = image_np.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, -angle, 1.0)
+    redressed = cv2.warpAffine(image_np, M, (w, h),
+                               flags=cv2.INTER_LINEAR,
+                               borderMode=cv2.BORDER_REPLICATE)
+    return redressed
+
+
 
 def est_mot_valide(mot):
     # Supprime les ponctuations et vérifie si le mot est alphabétique et a au moins 3 lettres
@@ -15,8 +56,7 @@ def zoom_image_for_extract(img, scale):
     return resized_img
 
 
-def rotate_image_if_needed(image_np, reader, seuil_mots=3
-                           ):
+def rotate_image_if_needed(image_np, reader, seuil_mots=3, fast_mode=True):
     angles = [0, 180, 90, 270]
     zoom_levels = [1.0, 1.5, 2.0, 2.5]
 
@@ -25,6 +65,21 @@ def rotate_image_if_needed(image_np, reader, seuil_mots=3
     best_angle = 0
     best_zoom = 1.0
 
+    if fast_mode:
+        # Test uniquement à 0°
+        results = reader.readtext(image_np)
+        mots_valides = [item[1].strip() for item in results if est_mot_valide(item[1])]
+        if len(mots_valides) >= seuil_mots:
+            return results
+        # sinon, on lance le mode complet (lent)
+        print("[INFO] OCR initial insuffisant, passage au mode lent...")
+
+    #on teste dabord si cest pas un others avant de faire la rotation
+    doc_type, confidence = predict_type(image_np)
+    if (str(doc_type).lower() == 'others' and confidence >= 0.80):
+        print("[INFO] others detecté. Rotation non necessaire")
+        return []
+    
     # Étape 1 : test de chaque rotation sans zoom
     for angle in angles:
         img = Image.fromarray(image_np).rotate(angle, expand=True)
@@ -84,9 +139,6 @@ def rotate_image_if_needed(image_np, reader, seuil_mots=3
     return best_results
 
 
-
-
-
 def file_storage_to_ndarray(file_storage):
     try:
         image = Image.open(file_storage.stream).convert('RGB')
@@ -120,7 +172,8 @@ def extract_ocr_text(recto_file, verso_file=None, reader=None):
 
     all_texts = []
     for img in images_np:
-        results = rotate_image_if_needed(img, reader)
+        img_redresse = corriger_rotation_par_modele(img)
+        results = rotate_image_if_needed(img_redresse, reader, seuil_mots=3, fast_mode=True)
         all_texts.extend(results)
 
     return all_texts

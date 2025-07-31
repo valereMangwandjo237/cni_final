@@ -1,10 +1,9 @@
 from flask import Flask, request, jsonify
-import os
 import json
 import easyocr
+from flask_cors import CORS
 from PIL import Image
 import traceback
-
 from predict import *
 from ocr_utils import extract_ocr_text, verifier_informations
 from global_score import *
@@ -12,6 +11,7 @@ import warnings
 warnings.filterwarnings("ignore", message=".*pin_memory.*")
 
 app = Flask(__name__)
+CORS(app, resources={r"/analyser": {"origins": "http://localhost:8000"}})  # autorise uniquement ton frontend Laravel
 
 reader = easyocr.Reader(['fr', 'en'], gpu=False, download_enabled=False)
 
@@ -37,12 +37,19 @@ def analyser():
         for key in required:
             if key not in json_data:
                 return jsonify({"error": f"Champ manquant : {key}"}), 400
+        #if file_verso:
+        #    verso_pil = Image.open(file_verso.stream).convert("RGB")
+        #    verso_pil = corriger_rotation_par_modele(verso_pil)  # ✅ Correction de la rotation
+
 
         img_pil = Image.open(file_recto.stream).convert("RGB")
+        #img_pil = corriger_rotation_par_modele(img_pil)  # ✅ Correction de la rotation
+
         img_np = np.array(img_pil)
         print(f"Type recto: {type(file_recto)}, verso: {type(file_verso)}")
 
         # Étape 1 : OCR
+        #ocr_texts = extract_ocr_text(img_pil, verso_pil, reader=reader)
         ocr_texts = extract_ocr_text(file_recto, file_verso, reader=reader)
         doc_type, confidence = predict_type_by_keyword(ocr_texts)
 
