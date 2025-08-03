@@ -11,7 +11,12 @@ import warnings
 warnings.filterwarnings("ignore", message=".*pin_memory.*")
 
 app = Flask(__name__)
-CORS(app, resources={r"/analyser": {"origins": "http://localhost:8000"}})  # autorise uniquement ton frontend Laravel
+
+CORS(app, resources={
+    r"/analyser": {
+        "origins": ["http://localhost:8000", "http://127.0.0.1:8000"]
+    }
+})  # autorise uniquement ton frontend Laravel
 
 reader = easyocr.Reader(['fr', 'en'], gpu=False, download_enabled=False)
 
